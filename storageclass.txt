@@ -1,0 +1,72 @@
+Dynamic Stoarge provisiong -Kuberneets
+
+link: https://kubernetes.io/docs/concepts/storage/storage-classes/
+
+
+(1) Create a storage class
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard-gce
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+  fstype: ext4
+
+ kubectl apply -f sc.yaml
+ kubectl get storageclass
+ kubectl describe storageclass gce-standard
+
+(2)Create a PVC
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc1
+spec:
+  storageClassName: standard-gce
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20G
+
+kubectl apply -f pvc1.yaml
+kubectl get pvc
+
+(3) Create pod claiming pvc
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-claim-pod 
+spec:
+  containers:
+    - name: nginx-test
+      image: nginx
+      volumeMounts:
+        - mountPath: /test-pd 
+          name: nginx-pod-volume 
+  volumes:
+    - name: nginx-pod-volume
+      persistentVolumeClaim:
+        claimName: pvc1
+
+kubectl apply -f nginx-pod-claim.yaml
+kubectl get pods
+
+kubectl exec nginx-claim-pod -it -- /bin/bash
+
+df -h /test-pd
+
+kubectl delete -f nginx-claim-pod -it
+
+
+(4)Destroying resources
+
+kubectl delete -f nginx-pod-claim.yaml
+
+kubectl delete -f pvc1.yaml
+
+kubectl delete -f sc.yaml

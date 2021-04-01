@@ -1,0 +1,123 @@
+gcloud compute zones list
+gcloud config set compute/zone us-west1-a
+
+gcloud container clusters create demo-cluster
+
+kubectl config current-context
+
+kubectl config view
+
+gcloud container clusters get-credentials demo-cluster
+
+gcloud container clusters get-credentials demo-cluster
+
+kubectl get nodes
+
+kubectl get pods
+
+kubectl cluster-info
+
+referrence: https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/preexisting-pd
+
+
+(1)create a persistent-disk (pv-test-disk)
+   
+    gcloud compute disks list
+
+(2)Create a Pv out of it
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-demo
+spec:
+  storageClassName: "demo-storageclass"
+  capacity:
+    storage: 10G
+  accessModes: 
+    - ReadWriteOnce
+  gcePersistentDisk:
+    pdName: pv-test-disk
+    fsType: ext4
+
+kubectl get pv
+
+
+(3)Create a pvc
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-demo
+spec:
+  storageClassName: "demo-storageclass"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10G
+
+kubectl apply -f test-pvc.yaml
+
+kubectl get pvc
+
+kubectl get pv
+
+
+
+(4)Create a claim pod
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-claim-demo
+spec:
+  volumes:
+    - name: pv-storage
+      persistentVolumeClaim:
+       claimName: pvc-demo
+  containers:
+    - name: task-pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: "http-server"
+      volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: pv-storage
+
+kubectl apply -f test-claim-pod.yaml
+
+kubectl get pods
+
+kubectl exec test-claim-pod.yaml -it -- /bin/bash
+
+lsblk
+df -h
+df -h /usr/share/nginx/html
+
+
+
+
+(5)Destroying resources:
+
+kubectl delete -f test-claim-pod.yaml
+
+kubectl get pods
+
+kubectl delete -f test-pvc.yaml
+
+kubectl get pvc
+
+kubectl get pv -- status:releases claim : default/pvc-demo
+
+kubectl delete -f test-pv.yaml
+
+kubectl get pv
+
+Finally Delete pd
+   
+         gcloud compute disks delete pv-test-disk --zone=us-west1-a
+
+
+
